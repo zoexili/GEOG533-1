@@ -1,0 +1,83 @@
+---
+title: "Final Project"
+author: "Li Xi"
+date: "November 30, 2017"
+output:
+  html_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data preprocessing
+```{r}
+library(raster)
+### get Landsat data
+ras1 <- list.files("C:/Users/Li/Desktop/Introduction to statistical methods for geography/labs/final project/Xi_Li_final_project/sample_data/2000",pattern="tif$",full.names=TRUE)
+```
+
+#create raster stack
+```{r}
+stack1 <- raster::stack(ras1)
+```
+
+# raster stack properties
+```{r}
+stack1
+nlayers(stack1)
+crs(stack1) # coordinate reference system
+ncell(stack1) # cells
+dim(stack1) 
+res(stack1) # spatial resolution
+```
+
+# visualize raster
+## 321 true color image
+```{r}
+plotRGB(stack1,r=3,g=2,b=1,axes=TRUE,stretch="lin",main="True Color Composite")
+```
+
+## 432 false color image
+```{r}
+plotRGB(stack1,r=4,g=3,b=2,axes=TRUE,stretch="lin",main="False Color Composite")
+```
+
+# Training and testing sampling
+```{r}
+library(caTools)
+dataset <- read.csv("20000927.csv")
+set.seed(101)
+split <- sample.split(dataset,SplitRatio=0.5)
+train <- subset(dataset,split==TRUE)
+test <- subset(dataset,split==TRUE)
+```
+
+# Random Forests Regression
+```{r}
+library(randomForest)
+x <- train[3:8]
+rf <- randomForest(x,train$Percentage,ntree=300)
+summary(rf)
+y_pred <- predict(rf,x,type="response")
+y <- as.vector(test[2])
+y_pred <- as.vector(y_pred)
+df2000 <- data.frame(y_pred,y)
+regressor <- lm(y_pred~Percentage,data=df2000)
+plot(df2000$Percentage,df2000$y_pred,main="True value V.S. Predicted Value 2000",xlab="True value",ylab="Predicted Value")
+abline(regressor,col='red')     
+anova(regressor)
+```
+
+# Accuracy accessment
+```{r}
+y_test <- test[2]
+MAE <- 1/105*(sum(abs(y_pred-y_test)))
+MAE
+SE <- 1/105*(sum(y_pred-y_test))
+SE
+```
